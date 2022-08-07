@@ -1,19 +1,27 @@
 id,name,craft_type,craft_duration,quantity,dependencies
 coal,Coal,Ore,1,1,
-iron_plate,Iron Plate,Smelt,3.2,1,
-copper_plate,Copper Plate,Smelt,3.2,1,
-stone_brick,Stone Brick,Smelt,3.2,1,
+iron,Iron,Ore,1,1,
+copper,Copper,Ore,1,1,
+stone,Stone,Ore,1,1,
+uranium,Uranium,Ore,1,1,
+iron_plate,Iron Plate,Smelt,3.2,1,iron:1
+copper_plate,Copper Plate,Smelt,3.2,1,copper:1
+stone_brick,Stone Brick,Smelt,3.2,1,stone:1
 steel_plate,Steel Plate,Smelt,16,1,iron_plate:5
-plastic,Plastic bar,Assemble,1,2,coal:1
+plastic,Plastic bar,Chemical,1,2,coal:1
 sulfur,Sulfur,Chemical,1,2,
 iron_gear,Iron Gear Wheel,Assemble,.5,1,iron_plate:2
 copper_wire,Copper Cable,Assemble,0.5,2,copper_plate:1
 pipe,Pipe,Assemble,0.5,1,iron_plate:1
+iron_stick,Iron Stick,Assemble,0.5,2,iron_plate:1
 belt,Transport belt,Assemble,0.5,1,iron_gear:1;iron_plate:1
 engine,Engine unit,Assemble,10,1,iron_gear:1;pipe:2;steel_plate:1
+rail,Rail,Assemble,0.5,2,iron_stick:1;steel_plate:1;stone:1
 green_chip,Electronic Circuit,Assemble,0.5,1,copper_wire:3;iron_plate:1
 red_chip,Advanced Circuit,Assemble,6,1,copper_wire:4;green_chip:2;plastic:2
+productivity_module,Productivity Module,Assemble,15,1,red_chip:5;green_chip:5
 inserter,Inserter,Assemble,0.5,1,iron_gear:1;iron_plate:1;green_chip:1
+electric_furnace,Electric Furnace,Assemble,5,1,red_chip:5;steel_plate:10;stone_brick:10
 wall,Wall,Assemble,0.5,1,stone_brick:5
 magazine,Firearm magazine,Assemble,1,1,iron_plate:4
 piercing_magazine,Piercing rounds magazine,Assemble,3,1,copper_plate:5;magazine:1;steel_plate:1
@@ -22,3 +30,4 @@ red_potion,Automation science pack,Assemble,5,1,copper_plate:1;iron_gear:1
 green_potion,Logistic science pack,Assemble,6,1,inserter:1;belt:1
 black_potion,Military science pack,Assemble,10,2,grenade:1;piercing_magazine:1;wall:2
 cyan_potion,Chemical science pack,Assemble,24,2,red_chip:2;engine:2;sulfur:1
+purple_potion,Productivity science pack,Assemble,21,3,rail:30;electric_furnace:1;productivity_module:1
