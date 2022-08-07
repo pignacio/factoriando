@@ -1,0 +1,19 @@
+{
+    "ores": [
+        "iron",
+        "copper",
+        "coal",
+        "stone",
+        "plastic",
+        "sulfur",
+        "heavy_oil"
+    ],
+    "science": [
+        "red_potion",
+        "green_potion",
+        "black_potion",
+        "blue_potion",
+        "purple_potion",
+        "yellow_potion"
+    ]
+}

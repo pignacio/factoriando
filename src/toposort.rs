@@ -1,9 +1,9 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::product::Product;
+use crate::{product::Product, error::Error};
 
 
-pub fn topological_sort(product_by_id: &HashMap<String, Product>, products: &Vec<Product>) -> Vec<Product> {
+pub fn topological_sort(product_by_id: &HashMap<String, Product>, products: &Vec<Product>) -> Result<Vec<Product>, Error> {
     let mut edges: HashMap<String, HashSet<String>> = HashMap::new();
     let mut anti_edges: HashMap<String, HashSet<String>> = HashMap::new();
     for product in product_by_id.values() {
@@ -21,7 +21,8 @@ pub fn topological_sort(product_by_id: &HashMap<String, Product>, products: &Vec
         .collect();
 
     while !remaining.is_empty() {
-        let id = &products.iter().rev().filter(|p| remaining.contains(&p.id)).next().unwrap().id;
+        let id = &products.iter().rev().filter(|p| remaining.contains(&p.id)).next()
+            .ok_or(Error::Simple(format!("Invalid remaining items: {:?}", remaining)))?.id;
         println!("topo_sort: Adding {}", id);
         remaining.remove(id);
         inorder.push(product_by_id[id].clone());
@@ -41,5 +42,5 @@ pub fn topological_sort(product_by_id: &HashMap<String, Product>, products: &Vec
     }
 
     inorder.reverse();
-    inorder
+    Ok(inorder)
 }
