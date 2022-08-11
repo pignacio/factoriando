@@ -113,9 +113,10 @@ fn run() -> Result<(), Error> {
                         } else {
                             "darkgreen"
                         };
+                        let source_amount = amount_for_parent * product.craft_duration / product.craft_type.best_craft_speed(&craft_tech_status) / product.quantity as f32;
                         dot_edges.push(format!(
-                            "  {} -> {} [label=\"{:.1} {}/s\",color=\"{}\"];",
-                            product.id, parent.id, amount_for_parent, product.id, color
+                            "  {} -> {} [label=\"{:.1} {}/s ({:.1})\",color=\"{}\"];",
+                            product.id, parent.id, amount_for_parent, product.id, source_amount, color
                         ));
                     });
             }
