@@ -12,10 +12,11 @@ use serde::de::DeserializeOwned;
 
 use crate::{
     error::Error,
-    product::{Product, ProductRow},
+    product::{Product, ProductRow, CraftTech}, module::{ModuleList, Module},
 };
 
 mod error;
+mod module;
 mod product;
 mod toposort;
 
@@ -40,10 +41,13 @@ fn run() -> Result<(), Error> {
 
     let sorted_products = toposort::topological_sort(&product_by_id, &products)?;
 
+    let mut assembler = product::Assembler::Blue{modules: ModuleList::new()};
+    assembler.add_module(Module::Speed3);
+    assembler.add_module(Module::Speed3);
     let craft_tech_status = CraftTechStatus::new(
         product::Miner::Electric,
         product::Furnace::Steel,
-        product::Assembler::Blue,
+        assembler,
     );
 
     let mut amount_per_second: HashMap<String, f32> = load_json("wanted.json")?;

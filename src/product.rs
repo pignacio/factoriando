@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
 
+use crate::module::{ModuleList, Module};
+
 #[derive(Debug, Serialize, Deserialize)]
 
 pub struct ProductRow {
@@ -113,6 +115,7 @@ impl CraftTechStatus {
 pub trait CraftTech {
     fn name(&self) -> String;
     fn speed(&self) -> f32;
+    fn add_module(&mut self, module: crate::module::Module);
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -134,6 +137,10 @@ impl CraftTech for Miner {
             Miner::Burner => 0.25,
             Miner::Electric => 0.5,
         }
+    }
+
+    fn add_module(&mut self, module: crate::module::Module) {
+        panic!("Modules are not supported in miners");
     }
 }
 
@@ -160,29 +167,43 @@ impl CraftTech for Furnace {
             Furnace::Electric => 2.,
         }
     }
+
+    fn add_module(&mut self, module: crate::module::Module) {
+        panic!("Modules in furnaces not supported")
+    }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub enum Assembler {
     Basic,
-    Blue,
+    Blue{modules: ModuleList<2>},
     Green,
 }
 
 impl CraftTech for Assembler {
     fn name(&self) -> String {
         return match self {
-            Assembler::Basic => "Basic Assembler",
-            Assembler::Blue => "Blue Assembler",
-            Assembler::Green => "Green Assembler",
-        }.to_owned()
+            Assembler::Basic => "Basic Assembler".to_owned(),
+            Assembler::Blue{ modules } => format!("Blue Assembler {}", modules),
+            Assembler::Green => "Green Assembler".to_owned(),
+        }
     }
 
     fn speed(&self) -> f32 {
         return match self {
             Assembler::Basic => 0.50,
-            Assembler::Blue => 0.75,
+            Assembler::Blue{ modules } => 0.75 * modules.speed(),
             Assembler::Green => 1.25,
+        }
+    }
+
+    fn add_module(&mut self, module: crate::module::Module) {
+        return match self {
+            Assembler::Basic => panic!("Cannot add modules to basic assembler"),
+            Assembler::Blue{ modules } => modules.add_module(module),
+            Assembler::Green => {
+                // do nothing
+            },
         }
     }
 }
@@ -205,5 +226,9 @@ impl CraftTech for SimpleCraftTech {
 
     fn speed(&self) -> f32 {
         self.speed
+    }
+
+    fn add_module(&mut self, module: crate::module::Module) {
+        panic!("Cannot add module to SimpleCraftTech");
     }
 }
