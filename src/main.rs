@@ -40,6 +40,17 @@ fn run() -> Result<(), Error> {
 
     let sorted_products = toposort::topological_sort(&product_by_id, &products)?;
 
+    let mut independencies: HashMap<String, Vec<String>> = HashMap::new();
+
+    for product in &sorted_products {
+        for dependency in product.dependencies.keys() {
+            independencies
+                .entry(dependency.to_owned())
+                .or_insert(Vec::new())
+                .push(product.id.to_owned())
+        }
+    }
+
     let craft_tech_status = CraftTechStatus::new(
         product::Miner::Electric,
         product::Furnace::Steel,
@@ -47,7 +58,10 @@ fn run() -> Result<(), Error> {
     );
 
     let mut amount_per_second: HashMap<String, f32> = load_json("wanted.json")?;
-    println!("Wanted amounts before completing dependencies: {:?}", amount_per_second);
+    println!(
+        "Wanted amounts before completing dependencies: {:?}",
+        amount_per_second
+    );
 
     for product in sorted_products.iter().rev() {
         let amount: f32 = amount_per_second.get(&product.id).unwrap_or(&0.0).clone();
@@ -59,10 +73,8 @@ fn run() -> Result<(), Error> {
         }
     }
 
-    
-
     let mut dot_nodes: HashMap<String, String> = HashMap::new();
-    let mut dot_edges: Vec<String> = Vec::new();
+    let mut dot_edges: HashMap<(String, String), String> = HashMap::new();
     for product in &sorted_products {
         let amount = amount_per_second.get(&product.id).unwrap_or(&0.0).clone();
 
@@ -83,10 +95,13 @@ fn run() -> Result<(), Error> {
                 product::CraftType::Chemical => "darkgreen",
                 _ => "black",
             };
-            dot_nodes.insert(product.id.clone(), format!(
-                "  {} [label=\"{}\\n{:.2}/s\\n{}\",color=\"{}\"];",
-                product.id, product.name, amount, source_string, color
-            ));
+            dot_nodes.insert(
+                product.id.clone(),
+                format!(
+                    "  {} [label=\"{}\\n{:.2}/s\\n{}\",color=\"{}\",URL=\"./{}.dot.svg\"];",
+                    product.id, product.name, amount, source_string, color, product.id
+                ),
+            );
 
             println!(
                 " * {}: {:.2}/s ({})",
@@ -114,40 +129,97 @@ fn run() -> Result<(), Error> {
                         } else {
                             "darkgreen"
                         };
-                        let source_amount = amount_for_parent * product.craft_duration / product.craft_type.best_craft_speed(&craft_tech_status) / product.quantity as f32;
-                        dot_edges.push(format!(
-                            "  {} -> {} [label=\"{:.1} {}/s ({:.1})\",color=\"{}\"];",
-                            product.id, parent.id, amount_for_parent, product.id, source_amount, color
-                        ));
+                        let source_amount = amount_for_parent * product.craft_duration
+                            / product.craft_type.best_craft_speed(&craft_tech_status)
+                            / product.quantity as f32;
+                        dot_edges.insert(
+                            (product.id.to_owned(), parent.id.to_owned()),
+                            format!(
+                                "  {} -> {} [label=\"{:.1} {}/s ({:.1})\",color=\"{}\"];",
+                                product.id,
+                                parent.id,
+                                amount_for_parent,
+                                product.id,
+                                source_amount,
+                                color
+                            ),
+                        );
                     });
             }
         }
     }
 
     let dot_clusters: HashMap<String, Vec<String>> = load_json("clusters.json")?;
+    let graph_dir = Path::new("graphs");
+    if !graph_dir.exists() {
+        fs::create_dir(graph_dir).unwrap();
+    }
+
+    for (product_id, product_line) in &dot_nodes {
+        let mut lines = Vec::new();
+        lines.push("digraph G {".to_owned());
+        lines.push(product_line.to_owned());
+
+        for dependency in product_by_id[product_id].dependencies.keys() {
+            if let Some(dep_line) = dot_nodes.get(dependency) {
+                lines.push(dep_line.to_owned());
+            }
+            if let Some(edge_line) = dot_edges.get(&(dependency.to_owned(), product_id.to_owned()))
+            {
+                lines.push(edge_line.to_owned());
+            }
+        }
+        for independency in independencies.get(product_id).unwrap_or(&Vec::new()) {
+            if let Some(dep_line) = dot_nodes.get(independency) {
+                lines.push(dep_line.to_owned());
+            }
+            if let Some(edge_line) =
+                dot_edges.get(&(product_id.to_owned(), independency.to_owned()))
+            {
+                lines.push(edge_line.to_owned());
+            }
+        }
+
+        lines.push("}".to_owned());
+
+        let dot_path = graph_dir.join(format!("{}.dot", product_id));
+        fs::write(&dot_path, lines.join("\n")).expect("Unable to write file");
+        Command::new("dot")
+            .args(["-O", &dot_path.to_str().unwrap(), "-Tsvg"])
+            .output()
+            .expect("failed to execute process");
+    }
 
     let mut dot_lines: Vec<String> = Vec::new();
     dot_lines.push("digraph G {".to_owned());
-    
+
     for (cluster_name, cluster_products) in dot_clusters.iter() {
         dot_lines.push(format!("subgraph cluster_{} {{", cluster_name));
         dot_lines.push("  color=\"white\"".to_owned());
         for product_id in cluster_products {
-            dot_nodes.remove(product_id).map(|line| dot_lines.push(line));
+            dot_nodes
+                .remove(product_id)
+                .map(|line| dot_lines.push(line));
         }
         dot_lines.push("}".to_owned());
     }
 
     for line in dot_nodes.values() {
         dot_lines.push(line.clone());
-    };
-    dot_lines.extend(dot_edges);
+    }
+    dot_lines.extend(
+        dot_edges
+            .values()
+            .map(|s| s.to_owned())
+            .collect::<Vec<String>>(),
+    );
     dot_lines.push("}".to_owned());
 
-    fs::write("graph.dot", dot_lines.join("\n")).expect("Unable to write file");
+    let all_path = graph_dir.join("main.dot");
+    fs::write(&all_path, dot_lines.join("\n")).expect("Unable to write file");
 
     Command::new("dot")
-        .args(["-O", "graph.dot", "-Tsvg"])
+        .args(["-O", all_path.to_str().unwrap(), "-Tsvg"])
         .output()
         .expect("failed to execute process");
 
