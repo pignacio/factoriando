@@ -54,6 +54,8 @@ pub enum CraftType {
     Smelt,
     Assemble,
     Chemical,
+    Silo,
+    Launch,
 }
 
 impl CraftType {
@@ -63,6 +65,8 @@ impl CraftType {
             &CraftType::Smelt => tech_status.furnace_speed(),
             &CraftType::Assemble => tech_status.assembler_speed(),
             &CraftType::Chemical => tech_status.chemical_speed(),
+            &CraftType::Silo => tech_status.silo_speed(),
+            &CraftType::Launch => 1.0,
         }
     }
 }
@@ -72,6 +76,7 @@ pub struct CraftTechStatus {
     furnace: Furnace,
     assembler: Assembler,
     chemical: SimpleCraftTech,
+    silo: SimpleCraftTech
 }
 
 impl CraftTechStatus {
@@ -81,6 +86,7 @@ impl CraftTechStatus {
             furnace, 
             assembler, 
             chemical: SimpleCraftTech::new("Chemical plant", 1.),
+            silo: SimpleCraftTech::new("Rocket Silo", 1.),
         }
     }
 
@@ -100,12 +106,18 @@ impl CraftTechStatus {
         return self.chemical.speed();
     }
 
+    pub fn silo_speed(&self) -> f32 {
+        return self.silo.speed();
+    }
+
     pub fn tech_for(&self, product: &Product) -> &dyn CraftTech {
         match product.craft_type {
             CraftType::Ore => &self.miner,
             CraftType::Smelt => &self.furnace,
             CraftType::Assemble => &self.assembler,
             CraftType::Chemical => &self.chemical,
+            CraftType::Silo => &self.silo,
+            CraftType::Launch => &self.silo,
         }
     }
 }
