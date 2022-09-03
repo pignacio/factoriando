@@ -1,5 +1,5 @@
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 
@@ -9,28 +9,36 @@ pub struct ProductRow {
     pub craft_duration: f32,
     pub craft_type: CraftType,
     pub quantity: i32,
-    dependencies: String
+    dependencies: String,
 }
 
 impl ProductRow {
-    pub fn to_domain(self) -> Product {
-        Product { 
-            id: self.id, 
-            name: self.name, 
-            craft_duration: self.craft_duration, 
-            craft_type: self.craft_type,  
+    pub fn into_domain(self) -> Product {
+        Product {
+            id: self.id,
+            name: self.name,
+            craft_duration: self.craft_duration,
+            craft_type: self.craft_type,
             quantity: self.quantity,
-            dependencies: ProductRow::build_dependencies(&self.dependencies) }
+            dependencies: ProductRow::build_dependencies(&self.dependencies),
+        }
     }
 
     fn build_dependencies(dependencies: &str) -> HashMap<String, f32> {
         if dependencies.is_empty() {
             return HashMap::new();
         }
-        dependencies.split(";")
+        dependencies
+            .split(';')
             .map(|s| {
-                let split: Vec<&str> = s.split(":").collect();
-                (split[0].to_owned(), split[1].parse::<f32>().map_err(|_e| format!("Could not parse {}", split[1])).unwrap())
+                let split: Vec<&str> = s.split(':').collect();
+                (
+                    split[0].to_owned(),
+                    split[1]
+                        .parse::<f32>()
+                        .map_err(|_e| format!("Could not parse {}", split[1]))
+                        .unwrap(),
+                )
             })
             .collect()
     }
@@ -46,23 +54,25 @@ pub struct Product {
     pub dependencies: HashMap<String, f32>,
 }
 
-
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum CraftType {
     Ore,
     Smelt,
     Assemble,
     Chemical,
+    Silo,
+    Launch,
 }
 
 impl CraftType {
     pub fn best_craft_speed(&self, tech_status: &CraftTechStatus) -> f32 {
         match &self {
-            &CraftType::Ore => tech_status.miner_speed(),
-            &CraftType::Smelt => tech_status.furnace_speed(),
-            &CraftType::Assemble => tech_status.assembler_speed(),
-            &CraftType::Chemical => tech_status.chemical_speed(),
+            CraftType::Ore => tech_status.miner_speed(),
+            CraftType::Smelt => tech_status.furnace_speed(),
+            CraftType::Assemble => tech_status.assembler_speed(),
+            CraftType::Chemical => tech_status.chemical_speed(),
+            CraftType::Silo => tech_status.silo_speed(),
+            CraftType::Launch => 1.0,
         }
     }
 }
@@ -72,32 +82,38 @@ pub struct CraftTechStatus {
     furnace: Furnace,
     assembler: Assembler,
     chemical: SimpleCraftTech,
+    silo: SimpleCraftTech,
 }
 
 impl CraftTechStatus {
     pub fn new(miner: Miner, furnace: Furnace, assembler: Assembler) -> Self {
-        CraftTechStatus { 
-            miner, 
-            furnace, 
-            assembler, 
+        CraftTechStatus {
+            miner,
+            furnace,
+            assembler,
             chemical: SimpleCraftTech::new("Chemical plant", 1.),
+            silo: SimpleCraftTech::new("Rocket Silo", 1.),
         }
     }
 
     pub fn miner_speed(&self) -> f32 {
-        return self.miner.speed();
+        self.miner.speed()
     }
 
     pub fn furnace_speed(&self) -> f32 {
-        return self.furnace.speed();
+        self.furnace.speed()
     }
 
     pub fn assembler_speed(&self) -> f32 {
-        return self.assembler.speed();
+        self.assembler.speed()
     }
 
     pub fn chemical_speed(&self) -> f32 {
-        return self.chemical.speed();
+        self.chemical.speed()
+    }
+
+    pub fn silo_speed(&self) -> f32 {
+        self.silo.speed()
     }
 
     pub fn tech_for(&self, product: &Product) -> &dyn CraftTech {
@@ -106,6 +122,8 @@ impl CraftTechStatus {
             CraftType::Smelt => &self.furnace,
             CraftType::Assemble => &self.assembler,
             CraftType::Chemical => &self.chemical,
+            CraftType::Silo => &self.silo,
+            CraftType::Launch => &self.silo,
         }
     }
 }
@@ -123,14 +141,15 @@ pub enum Miner {
 
 impl CraftTech for Miner {
     fn name(&self) -> String {
-        return match self {
+        match self {
             Miner::Burner => "Burner Miner",
             Miner::Electric => "Electric Miner",
-        }.to_owned()
+        }
+        .to_owned()
     }
 
     fn speed(&self) -> f32 {
-        return match self {
+        match self {
             Miner::Burner => 0.25,
             Miner::Electric => 0.5,
         }
@@ -146,15 +165,16 @@ pub enum Furnace {
 
 impl CraftTech for Furnace {
     fn name(&self) -> String {
-        return match self {
+        match self {
             Furnace::Stone => "Stone Furnace",
             Furnace::Steel => "Steel Furnace",
             Furnace::Electric => "Electric Furnace",
-        }.to_owned()
+        }
+        .to_owned()
     }
 
     fn speed(&self) -> f32 {
-        return match self {
+        match self {
             Furnace::Stone => 1.,
             Furnace::Steel => 2.,
             Furnace::Electric => 2.,
@@ -171,15 +191,16 @@ pub enum Assembler {
 
 impl CraftTech for Assembler {
     fn name(&self) -> String {
-        return match self {
+        match self {
             Assembler::Basic => "Basic Assembler",
             Assembler::Blue => "Blue Assembler",
             Assembler::Green => "Green Assembler",
-        }.to_owned()
+        }
+        .to_owned()
     }
 
     fn speed(&self) -> f32 {
-        return match self {
+        match self {
             Assembler::Basic => 0.50,
             Assembler::Blue => 0.75,
             Assembler::Green => 1.25,
@@ -194,7 +215,10 @@ struct SimpleCraftTech {
 
 impl SimpleCraftTech {
     pub fn new<S: AsRef<str>>(name: S, speed: f32) -> Self {
-        SimpleCraftTech { name: name.as_ref().to_owned(), speed}
+        SimpleCraftTech {
+            name: name.as_ref().to_owned(),
+            speed,
+        }
     }
 }
 

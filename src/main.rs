@@ -3,7 +3,6 @@ use std::{
     fs::{self, File},
     io::BufReader,
     path::Path,
-    process::Command,
 };
 
 use colored::Colorize;
@@ -15,7 +14,9 @@ use crate::{
     product::{Product, ProductRow},
 };
 
+mod dot;
 mod error;
+mod graph;
 mod product;
 mod toposort;
 
@@ -30,7 +31,7 @@ fn run() -> Result<(), Error> {
         //.map(|x: Result<ProductRow, csv::Error>| x.and_then(|p| p.to_domain() ))
         .collect();
 
-    let products: Vec<Product> = rows.unwrap().into_iter().map(|p| p.to_domain()).collect();
+    let products: Vec<Product> = rows.unwrap().into_iter().map(|p| p.into_domain()).collect();
 
     let mut product_by_id: HashMap<String, Product> = HashMap::new();
 
@@ -40,6 +41,17 @@ fn run() -> Result<(), Error> {
 
     let sorted_products = toposort::topological_sort(&product_by_id, &products)?;
 
+    let mut independencies: HashMap<String, Vec<String>> = HashMap::new();
+
+    for product in &sorted_products {
+        for dependency in product.dependencies.keys() {
+            independencies
+                .entry(dependency.to_owned())
+                .or_insert(Vec::new())
+                .push(product.id.to_owned())
+        }
+    }
+
     let craft_tech_status = CraftTechStatus::new(
         product::Miner::Electric,
         product::Furnace::Steel,
@@ -47,10 +59,13 @@ fn run() -> Result<(), Error> {
     );
 
     let mut amount_per_second: HashMap<String, f32> = load_json("wanted.json")?;
-    println!("Wanted amounts before completing dependencies: {:?}", amount_per_second);
+    println!(
+        "Wanted amounts before completing dependencies: {:?}",
+        amount_per_second
+    );
 
     for product in sorted_products.iter().rev() {
-        let amount: f32 = amount_per_second.get(&product.id).unwrap_or(&0.0).clone();
+        let amount: f32 = *amount_per_second.get(&product.id).unwrap_or(&0.0);
         println!("Adding dependencies for {} {}w/s", amount, product.name);
         for (child, child_amount) in product.dependencies.iter() {
             let current_amount = amount_per_second.get(child).unwrap_or(&0.0);
@@ -59,12 +74,10 @@ fn run() -> Result<(), Error> {
         }
     }
 
-    
-
-    let mut dot_nodes: HashMap<String, String> = HashMap::new();
-    let mut dot_edges: Vec<String> = Vec::new();
+    let mut nodes: HashMap<String, graph::Node> = HashMap::new();
+    let mut edges: HashMap<(String, String), graph::Edge> = HashMap::new();
     for product in &sorted_products {
-        let amount = amount_per_second.get(&product.id).unwrap_or(&0.0).clone();
+        let amount = *amount_per_second.get(&product.id).unwrap_or(&0.0);
 
         if amount > 0. {
             let source_amount = amount * product.craft_duration
@@ -77,15 +90,23 @@ fn run() -> Result<(), Error> {
             );
 
             let color = match product.craft_type {
-                product::CraftType::Ore => "orange",
-                product::CraftType::Smelt => "red",
-                product::CraftType::Assemble => "blue",
-                product::CraftType::Chemical => "darkgreen",
+                product::CraftType::Ore => graph::Color::Yellow,
+                product::CraftType::Smelt => graph::Color::Red,
+                product::CraftType::Assemble => graph::Color::Blue,
+                product::CraftType::Chemical => graph::Color::Green,
+                _ => graph::Color::Black,
             };
-            dot_nodes.insert(product.id.clone(), format!(
-                "  {} [label=\"{}\\n{:.2}/s\\n{}\",color=\"{}\"];",
-                product.id, product.name, amount, source_string, color
-            ));
+            nodes.insert(
+                product.id.clone(),
+                graph::Node::new(
+                    &product.id,
+                    &product.name,
+                    amount,
+                    source_amount,
+                    craft_tech_status.tech_for(product).name(),
+                    color,
+                ),
+            );
 
             println!(
                 " * {}: {:.2}/s ({})",
@@ -95,7 +116,7 @@ fn run() -> Result<(), Error> {
             );
 
             for parent in &sorted_products {
-                amount_per_second
+                if let Some(amount_for_parent) = amount_per_second
                     .get(&parent.id)
                     .and_then(|parent_amount| {
                         parent
@@ -104,51 +125,78 @@ fn run() -> Result<(), Error> {
                             .map(|q| parent_amount * q / parent.quantity as f32)
                     })
                     .filter(|amount| *amount > 0.0)
-                    .map(|amount_for_parent| {
-                        println!("   - {:.1}/s for {}", amount_for_parent, parent.id);
-                        let color = if amount_for_parent > 0.5 * amount {
-                            "red"
-                        } else if amount_for_parent > 0.25 * amount {
-                            "orange"
-                        } else {
-                            "darkgreen"
-                        };
-                        let source_amount = amount_for_parent * product.craft_duration / product.craft_type.best_craft_speed(&craft_tech_status) / product.quantity as f32;
-                        dot_edges.push(format!(
-                            "  {} -> {} [label=\"{:.1} {}/s ({:.1})\",color=\"{}\"];",
-                            product.id, parent.id, amount_for_parent, product.id, source_amount, color
-                        ));
-                    });
+                {
+                    println!("   - {:.1}/s for {}", amount_for_parent, parent.id);
+                    let color = if amount_for_parent > 0.5 * amount {
+                        graph::Color::Red
+                    } else if amount_for_parent > 0.25 * amount {
+                        graph::Color::Yellow
+                    } else {
+                        graph::Color::Green
+                    };
+                    let source_amount = amount_for_parent * product.craft_duration
+                        / product.craft_type.best_craft_speed(&craft_tech_status)
+                        / product.quantity as f32;
+
+                    let key = (product.id.to_owned(), parent.id.to_owned());
+                    edges.insert(
+                        key,
+                        graph::Edge::new(
+                            &product.id,
+                            &parent.id,
+                            amount_for_parent,
+                            source_amount,
+                            color,
+                        ),
+                    );
+                }
             }
         }
     }
 
     let dot_clusters: HashMap<String, Vec<String>> = load_json("clusters.json")?;
-
-    let mut dot_lines: Vec<String> = Vec::new();
-    dot_lines.push("digraph G {".to_owned());
-    
-    for (cluster_name, cluster_products) in dot_clusters.iter() {
-        dot_lines.push(format!("subgraph cluster_{} {{", cluster_name));
-        dot_lines.push("  color=\"white\"".to_owned());
-        for product_id in cluster_products {
-            dot_nodes.remove(product_id).map(|line| dot_lines.push(line));
-        }
-        dot_lines.push("}".to_owned());
+    let graph_dir = Path::new("graphs");
+    if !graph_dir.exists() {
+        fs::create_dir(graph_dir).unwrap();
     }
 
-    for line in dot_nodes.values() {
-        dot_lines.push(line.clone());
-    };
-    dot_lines.extend(dot_edges);
-    dot_lines.push("}".to_owned());
+    for (product_id, product_node) in &nodes {
+        let mut these_nodes = Vec::new();
+        let mut these_edges = Vec::new();
 
-    fs::write("graph.dot", dot_lines.join("\n")).expect("Unable to write file");
+        these_nodes.push(product_node.clone());
 
-    Command::new("dot")
-        .args(["-O", "graph.dot", "-Tsvg"])
-        .output()
-        .expect("failed to execute process");
+        for dependency in product_by_id[product_id].dependencies.keys() {
+            if let Some(dep_node) = nodes.get(dependency) {
+                these_nodes.push(dep_node.clone());
+            }
+            if let Some(dep_edge) = edges.get(&(dependency.to_owned(), product_id.to_owned())) {
+                these_edges.push(dep_edge.clone());
+            }
+        }
+
+        for independency in independencies.get(product_id).unwrap_or(&Vec::new()) {
+            if let Some(indep_node) = nodes.get(independency) {
+                these_nodes.push(indep_node.clone());
+            }
+            if let Some(indep_edge) = edges.get(&(product_id.to_owned(), independency.to_owned())) {
+                these_edges.push(indep_edge.clone());
+            }
+        }
+
+        let dot_path = graph_dir.join(format!("{}.dot", product_id));
+
+        dot::write_graph(these_nodes, these_edges, dot_path);
+    }
+
+    let all_path = graph_dir.join("main.dot");
+
+    dot::write_graph_with_clusters(
+        nodes.values().cloned().collect(),
+        edges.values().cloned().collect(),
+        dot_clusters,
+        all_path,
+    );
 
     Ok(())
 }
