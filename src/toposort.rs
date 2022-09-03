@@ -21,7 +21,7 @@ pub fn topological_sort(product_by_id: &HashMap<String, Product>, products: &Vec
         .collect();
 
     while !remaining.is_empty() {
-        let id = &products.iter().rev().filter(|p| remaining.contains(&p.id)).next()
+        let id = &products.iter().rev().find(|p| remaining.contains(&p.id))
             .ok_or(Error::Simple(format!("Invalid remaining items: {:?}", remaining)))?.id;
         println!("topo_sort: Adding {}", id);
         remaining.remove(id);

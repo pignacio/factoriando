@@ -24,9 +24,8 @@ pub fn write_graph_with_clusters<P: AsRef<Path>>(nodes: Vec<graph::Node>, edges:
         lines.push(format!("subgraph cluster_{} {{", cluster_name));
         lines.push("  color=\"white\"".to_owned());
         for product_id in cluster_products {
-            nodes_by_id
-                .remove(product_id)
-                .map(|node| lines.push(to_dot_node(&node)));
+            if let Some(node) = nodes_by_id
+                .remove(product_id) { lines.push(to_dot_node(&node)) }
         }
         lines.push("}".to_owned());
     }
@@ -42,7 +41,7 @@ pub fn write_graph_with_clusters<P: AsRef<Path>>(nodes: Vec<graph::Node>, edges:
 
     fs::write(path.as_ref(), lines.join("\n")).expect("Unable to write file");
     Command::new("dot")
-        .args(["-O", &path.as_ref().to_str().unwrap(), "-Tsvg"])
+        .args(["-O", path.as_ref().to_str().unwrap(), "-Tsvg"])
         .output()
         .expect("failed to execute process");
 }

@@ -65,7 +65,7 @@ fn run() -> Result<(), Error> {
     );
 
     for product in sorted_products.iter().rev() {
-        let amount: f32 = amount_per_second.get(&product.id).unwrap_or(&0.0).clone();
+        let amount: f32 = *amount_per_second.get(&product.id).unwrap_or(&0.0);
         println!("Adding dependencies for {} {}w/s", amount, product.name);
         for (child, child_amount) in product.dependencies.iter() {
             let current_amount = amount_per_second.get(child).unwrap_or(&0.0);
@@ -77,7 +77,7 @@ fn run() -> Result<(), Error> {
     let mut nodes: HashMap<String, graph::Node> = HashMap::new();
     let mut edges: HashMap<(String, String), graph::Edge> = HashMap::new();
     for product in &sorted_products {
-        let amount = amount_per_second.get(&product.id).unwrap_or(&0.0).clone();
+        let amount = *amount_per_second.get(&product.id).unwrap_or(&0.0);
 
         if amount > 0. {
             let source_amount = amount * product.craft_duration
@@ -140,7 +140,7 @@ fn run() -> Result<(), Error> {
 
                         let key = (product.id.to_owned(), parent.id.to_owned());
                         edges.insert(
-                            key.clone(),
+                            key,
                             graph::Edge::new(
                                 &product.id,
                                 &parent.id,

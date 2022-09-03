@@ -27,9 +27,9 @@ impl ProductRow {
         if dependencies.is_empty() {
             return HashMap::new();
         }
-        dependencies.split(";")
+        dependencies.split(';')
             .map(|s| {
-                let split: Vec<&str> = s.split(":").collect();
+                let split: Vec<&str> = s.split(':').collect();
                 (split[0].to_owned(), split[1].parse::<f32>().map_err(|_e| format!("Could not parse {}", split[1])).unwrap())
             })
             .collect()
@@ -91,23 +91,23 @@ impl CraftTechStatus {
     }
 
     pub fn miner_speed(&self) -> f32 {
-        return self.miner.speed();
+        self.miner.speed()
     }
 
     pub fn furnace_speed(&self) -> f32 {
-        return self.furnace.speed();
+        self.furnace.speed()
     }
 
     pub fn assembler_speed(&self) -> f32 {
-        return self.assembler.speed();
+        self.assembler.speed()
     }
 
     pub fn chemical_speed(&self) -> f32 {
-        return self.chemical.speed();
+        self.chemical.speed()
     }
 
     pub fn silo_speed(&self) -> f32 {
-        return self.silo.speed();
+        self.silo.speed()
     }
 
     pub fn tech_for(&self, product: &Product) -> &dyn CraftTech {
@@ -135,14 +135,14 @@ pub enum Miner {
 
 impl CraftTech for Miner {
     fn name(&self) -> String {
-        return match self {
+        match self {
             Miner::Burner => "Burner Miner",
             Miner::Electric => "Electric Miner",
         }.to_owned()
     }
 
     fn speed(&self) -> f32 {
-        return match self {
+        match self {
             Miner::Burner => 0.25,
             Miner::Electric => 0.5,
         }
@@ -158,7 +158,7 @@ pub enum Furnace {
 
 impl CraftTech for Furnace {
     fn name(&self) -> String {
-        return match self {
+        match self {
             Furnace::Stone => "Stone Furnace",
             Furnace::Steel => "Steel Furnace",
             Furnace::Electric => "Electric Furnace",
@@ -166,7 +166,7 @@ impl CraftTech for Furnace {
     }
 
     fn speed(&self) -> f32 {
-        return match self {
+        match self {
             Furnace::Stone => 1.,
             Furnace::Steel => 2.,
             Furnace::Electric => 2.,
@@ -183,7 +183,7 @@ pub enum Assembler {
 
 impl CraftTech for Assembler {
     fn name(&self) -> String {
-        return match self {
+        match self {
             Assembler::Basic => "Basic Assembler",
             Assembler::Blue => "Blue Assembler",
             Assembler::Green => "Green Assembler",
@@ -191,7 +191,7 @@ impl CraftTech for Assembler {
     }
 
     fn speed(&self) -> f32 {
-        return match self {
+        match self {
             Assembler::Basic => 0.50,
             Assembler::Blue => 0.75,
             Assembler::Green => 1.25,
