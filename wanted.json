@@ -1,3 +1,9 @@
 {
-    "white_potion": 5
+    "red_potion": 0.5,
+    "green_potion": 0.5,
+    "black_potion": 0.5,
+    "blue_potion": 0.5,
+    "purple_potion": 0.5,
+    "yellow_potion": 0.5,
+    "white_potion": 0.5
 }
