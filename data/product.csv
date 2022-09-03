@@ -8,19 +8,28 @@ iron_plate,Iron Plate,Smelt,3.2,1,iron:1
 copper_plate,Copper Plate,Smelt,3.2,1,copper:1
 stone_brick,Stone Brick,Smelt,3.2,1,stone:1
 steel_plate,Steel Plate,Smelt,16,1,iron_plate:5
-plastic,Plastic bar,Chemical,1,2,coal:1
-sulfur,Sulfur,Chemical,1,2,
+plastic,Plastic bar,Chemical,1,2,coal:1;petroleum:20
+sulfur,Sulfur,Chemical,1,2,petroleum:30
 sulfuric_acid,Sulfuric Acid,Chemical,1,50,iron_plate:1;sulfur:5
+explosives,Explosives,Chemical,4,2,sulfur:1;coal:1
+petroleum,Petroleum Gas,Chemical,5,55,
+light_oil,Light Oil,Chemical,5,45,
 heavy_oil,Heavy Oil,Chemical,5,25,
 lubricant,Lubricant,Chemical,1,10,heavy_oil:10
+solid_fuel,Solid Fuel,Chemical,2,1,light_oil:10
+rocket_fuel,Rocket Fuel,Assemble,30,1,solid_fuel:10;light_oil:10
 iron_gear,Iron Gear Wheel,Assemble,.5,1,iron_plate:2
 copper_wire,Copper Cable,Assemble,0.5,2,copper_plate:1
 pipe,Pipe,Assemble,0.5,1,iron_plate:1
 iron_stick,Iron Stick,Assemble,0.5,2,iron_plate:1
+storage_tank,Storage Tank,Assemble,3,1,iron_plate:20;steel_plate:5
 low_density_structure,Low Density Structure,Assemble,20,1,copper_plate:20;plastic:5;steel_plate:2
-belt,Transport belt,Assemble,0.5,1,iron_gear:1;iron_plate:1
+belt,Transport belt,Assemble,0.5,2,iron_gear:1;iron_plate:1
 engine,Engine unit,Assemble,10,1,iron_gear:1;pipe:2;steel_plate:1
 rail,Rail,Assemble,0.5,2,iron_stick:1;steel_plate:1;stone:1
+locomotive,Locomotive,Assemble,4,1,green_chip:1;engine:20;steel_plate:32
+cargo_wagon,Cargo Wagon,Assemble,1,1,iron_gear:1;iron_plate:20;steel_plate:20
+fluid_wagon,Fluid Wagon,Assemble,1.5,1,iron_gear:10;pipe:8;steel_plate:16;storage_tank:1
 green_chip,Electronic Circuit,Assemble,0.5,1,copper_wire:3;iron_plate:1
 red_chip,Advanced Circuit,Assemble,6,1,copper_wire:4;green_chip:2;plastic:2
 blue_chip,Processing Unit,Assemble,10,1,red_chip:2;green_chip:20;sulfuric_acid:5
@@ -39,6 +48,14 @@ wall,Wall,Assemble,0.5,1,stone_brick:5
 magazine,Firearm magazine,Assemble,1,1,iron_plate:4
 piercing_magazine,Piercing rounds magazine,Assemble,3,1,copper_plate:5;magazine:1;steel_plate:1
 grenade,Grenade,Assemble,8,1,coal:10;iron_plate:5
+explosive_shell,Explosive Cannon Shell,Assemble,8,1,explosives:1;plastic:2;steel_plate:2
+artillery_shell,Artillery Shell,Assemble,15,1,explosive_shell:4;explosives:8;radar:1
+radar,Radar,Assemble,0.5,1,green_chip:5;iron_gear:5;iron_plate:10
+rocket_control_unit,Rocket Control Unit,Assemble,30,1,blue_chip:1;speed_module:1
+rocket_part,Rocket Part,Silo,3,1,rocket_fuel:10;low_density_structure:10;rocket_control_unit:10
+solar_panel,Solar Panel,Assemble,10,1,iron_plate:5;green_chip:15;steel_plate:5
+accumulator,Accumulator,Assemble,10,1,battery:5;iron_plate:2
+sattelite,Sattelite,Assemble,5,1,blue_chip:100;low_density_structure:100;rocket_fuel:50;solar_panel:100;accumulator:100;radar:5
 electric_engine,Electric Engine Unit,Assemble,10,1,green_chip:2;engine:1;lubricant:15
 battery,Battery,Assemble,4,1,iron_plate:1;copper_plate:1;sulfuric_acid:20
 flying_robot_frame,Flying Robot Frame,Assemble,20,1,steel_plate:1;green_chip:3;battery:2;electric_engine:1
@@ -48,3 +65,7 @@ black_potion,Military science pack,Assemble,10,2,grenade:1;piercing_magazine:1;w
 blue_potion,Chemical science pack,Assemble,24,2,red_chip:2;engine:2;sulfur:1
 purple_potion,Productivity science pack,Assemble,21,3,rail:30;electric_furnace:1;productivity_module:1
 yellow_potion,Utility science pack,Assemble,21,3,blue_chip:2;low_density_structure:3;flying_robot_frame:1
+white_potion,Space science pack,Launch,10,1000,rocket_part:100;sattelite:1;rocket_part:100
+gun_turret,Gun Turret,Assemble,8,1,copper_plate:10;iron_gear:10;iron_plate:20
+laser_turret,Laser Turret,Assemble,20,1,battery:12;green_chip:20;steel_plate:20
+flame_turret,Flamethrower Turret,Assemble,20,1,engine:5;iron_gear:15;pipe:10;steel_plate:30

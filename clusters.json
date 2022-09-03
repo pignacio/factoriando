@@ -4,8 +4,8 @@
         "copper",
         "coal",
         "stone",
-        "plastic",
-        "sulfur",
+        "petroleum",
+        "light_oil",
         "heavy_oil"
     ],
     "science": [
@@ -14,6 +14,7 @@
         "black_potion",
         "blue_potion",
         "purple_potion",
-        "yellow_potion"
+        "yellow_potion",
+        "white_potion"
     ]
 }

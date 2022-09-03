@@ -85,6 +85,7 @@ fn run() -> Result<(), Error> {
                 product::CraftType::Smelt => "red",
                 product::CraftType::Assemble => "blue",
                 product::CraftType::Chemical => "darkgreen",
+                _ => "black",
             };
             dot_nodes.insert(product.id.clone(), format!(
                 "  {} [label=\"{}\\n{:.2}/s\\n{}\",color=\"{}\"];",
