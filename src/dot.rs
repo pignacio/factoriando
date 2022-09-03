@@ -1,7 +1,7 @@
 use std::{
-    fs::{self, File},
+    fs::{self},
     path::Path,
-    process::Command, collections::HashMap, hash::Hash,
+    process::Command, collections::HashMap,
 };
 
 use crate::graph;
