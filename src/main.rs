@@ -31,7 +31,7 @@ fn run() -> Result<(), Error> {
         //.map(|x: Result<ProductRow, csv::Error>| x.and_then(|p| p.to_domain() ))
         .collect();
 
-    let products: Vec<Product> = rows.unwrap().into_iter().map(|p| p.to_domain()).collect();
+    let products: Vec<Product> = rows.unwrap().into_iter().map(|p| p.into_domain()).collect();
 
     let mut product_by_id: HashMap<String, Product> = HashMap::new();
 
@@ -90,7 +90,7 @@ fn run() -> Result<(), Error> {
             );
 
             let color = match product.craft_type {
-                product::CraftType::Ore => graph::Color::Orange,
+                product::CraftType::Ore => graph::Color::Yellow,
                 product::CraftType::Smelt => graph::Color::Red,
                 product::CraftType::Assemble => graph::Color::Blue,
                 product::CraftType::Chemical => graph::Color::Green,
@@ -116,7 +116,7 @@ fn run() -> Result<(), Error> {
             );
 
             for parent in &sorted_products {
-                amount_per_second
+                if let Some(amount_for_parent) = amount_per_second
                     .get(&parent.id)
                     .and_then(|parent_amount| {
                         parent
@@ -125,31 +125,31 @@ fn run() -> Result<(), Error> {
                             .map(|q| parent_amount * q / parent.quantity as f32)
                     })
                     .filter(|amount| *amount > 0.0)
-                    .map(|amount_for_parent| {
-                        println!("   - {:.1}/s for {}", amount_for_parent, parent.id);
-                        let color = if amount_for_parent > 0.5 * amount {
-                            graph::Color::Red
-                        } else if amount_for_parent > 0.25 * amount {
-                            graph::Color::Orange
-                        } else {
-                            graph::Color::Green
-                        };
-                        let source_amount = amount_for_parent * product.craft_duration
-                            / product.craft_type.best_craft_speed(&craft_tech_status)
-                            / product.quantity as f32;
+                {
+                    println!("   - {:.1}/s for {}", amount_for_parent, parent.id);
+                    let color = if amount_for_parent > 0.5 * amount {
+                        graph::Color::Red
+                    } else if amount_for_parent > 0.25 * amount {
+                        graph::Color::Yellow
+                    } else {
+                        graph::Color::Green
+                    };
+                    let source_amount = amount_for_parent * product.craft_duration
+                        / product.craft_type.best_craft_speed(&craft_tech_status)
+                        / product.quantity as f32;
 
-                        let key = (product.id.to_owned(), parent.id.to_owned());
-                        edges.insert(
-                            key,
-                            graph::Edge::new(
-                                &product.id,
-                                &parent.id,
-                                amount_for_parent,
-                                source_amount,
-                                color,
-                            ),
-                        );
-                    });
+                    let key = (product.id.to_owned(), parent.id.to_owned());
+                    edges.insert(
+                        key,
+                        graph::Edge::new(
+                            &product.id,
+                            &parent.id,
+                            amount_for_parent,
+                            source_amount,
+                            color,
+                        ),
+                    );
+                }
             }
         }
     }
@@ -183,7 +183,6 @@ fn run() -> Result<(), Error> {
                 these_edges.push(indep_edge.clone());
             }
         }
-
 
         let dot_path = graph_dir.join(format!("{}.dot", product_id));
 

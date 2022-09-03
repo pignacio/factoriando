@@ -1,10 +1,7 @@
-use std::fmt::{Write};
-
 #[derive(Debug, Clone, Copy)]
 pub enum Color {
     Green,
     Yellow,
-    Orange,
     Red,
     Blue,
     Black,
