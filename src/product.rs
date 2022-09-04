@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::module::{Module, ModuleList};
+use crate::module::ModuleList;
 
 #[derive(Debug, Serialize, Deserialize)]
 
@@ -77,6 +77,17 @@ impl CraftType {
             CraftType::Launch => 1.0,
         }
     }
+
+    pub fn craft_tech<'a>(&self, tech_status: &'a CraftTechStatus) -> &'a dyn CraftTech {
+        match &self {
+            CraftType::Ore => &tech_status.miner,
+            CraftType::Smelt => &tech_status.furnace,
+            CraftType::Assemble => &tech_status.assembler,
+            CraftType::Chemical => &tech_status.chemical,
+            CraftType::Silo => &tech_status.silo,
+            CraftType::Launch => &tech_status.silo,
+        }
+    }
 }
 
 pub struct CraftTechStatus {
@@ -85,6 +96,7 @@ pub struct CraftTechStatus {
     assembler: Assembler,
     chemical: SimpleCraftTech,
     silo: SimpleCraftTech,
+    override_by_product: HashMap<String, Box<dyn CraftTech>>,
 }
 
 impl CraftTechStatus {
@@ -93,8 +105,9 @@ impl CraftTechStatus {
             miner,
             furnace,
             assembler,
-            chemical: SimpleCraftTech::new("Chemical plant", 1.),
-            silo: SimpleCraftTech::new("Rocket Silo", 1.),
+            chemical: SimpleCraftTech::new("Chemical plant", 1., 1.),
+            silo: SimpleCraftTech::new("Rocket Silo", 1., 1.),
+            override_by_product: HashMap::new(),
         }
     }
 
@@ -118,7 +131,19 @@ impl CraftTechStatus {
         self.silo.speed()
     }
 
+    pub fn add_override<S: AsRef<str>>(&mut self, product_id: S, tech: Box<dyn CraftTech>) {
+        self.override_by_product
+            .insert(product_id.as_ref().to_owned(), tech);
+    }
+
     pub fn tech_for(&self, product: &Product) -> &dyn CraftTech {
+        self.override_by_product
+            .get(&product.id)
+            .map(|b| b.as_ref())
+            .unwrap_or_else(|| self.default_tech_for(product))
+    }
+
+    fn default_tech_for(&self, product: &Product) -> &dyn CraftTech {
         match product.craft_type {
             CraftType::Ore => &self.miner,
             CraftType::Smelt => &self.furnace,
@@ -133,6 +158,7 @@ impl CraftTechStatus {
 pub trait CraftTech {
     fn name(&self) -> String;
     fn speed(&self) -> f32;
+    fn productivity(&self) -> f32;
     fn add_module(&mut self, module: crate::module::Module);
 }
 
@@ -158,7 +184,11 @@ impl CraftTech for Miner {
         }
     }
 
-    fn add_module(&mut self, module: crate::module::Module) {
+    fn productivity(&self) -> f32 {
+        1.0
+    }
+
+    fn add_module(&mut self, _module: crate::module::Module) {
         panic!("Modules are not supported in miners");
     }
 }
@@ -188,16 +218,51 @@ impl CraftTech for Furnace {
         }
     }
 
-    fn add_module(&mut self, module: crate::module::Module) {
+    fn productivity(&self) -> f32 {
+        1.0
+    }
+
+    fn add_module(&mut self, _module: crate::module::Module) {
         panic!("Modules in furnaces not supported")
     }
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub enum Assembler {
     Basic,
     Blue { modules: ModuleList<2> },
-    Green,
+    Green { modules: ModuleList<4> },
+}
+
+impl Assembler {
+    pub fn blue() -> Self {
+        Assembler::Blue {
+            modules: ModuleList::new(),
+        }
+    }
+
+    pub fn green() -> Self {
+        Assembler::Green {
+            modules: ModuleList::new(),
+        }
+    }
+
+    fn base_speed(&self) -> f32 {
+        match self {
+            Assembler::Basic => 0.50,
+            Assembler::Blue { .. } => 0.75,
+            Assembler::Green { .. } => 1.25,
+        }
+    }
+
+    fn speed_multiplier(&self) -> f32 {
+        match self {
+            Assembler::Basic => 0.0,
+            Assembler::Blue { modules } => 1. + modules.speed_bonus(),
+            Assembler::Green { modules } => 1. + modules.speed_bonus(),
+        }
+    }
 }
 
 impl CraftTech for Assembler {
@@ -205,15 +270,19 @@ impl CraftTech for Assembler {
         return match self {
             Assembler::Basic => "Basic Assembler".to_owned(),
             Assembler::Blue { modules } => format!("Blue Assembler {}", modules),
-            Assembler::Green => "Green Assembler".to_owned(),
+            Assembler::Green { modules } => format!("Green Assembler {}", modules),
         };
     }
 
     fn speed(&self) -> f32 {
+        self.base_speed() * self.speed_multiplier()
+    }
+
+    fn productivity(&self) -> f32 {
         match self {
-            Assembler::Basic => 0.50,
-            Assembler::Blue { modules } => 0.75 * modules.speed(),
-            Assembler::Green => 1.25,
+            Assembler::Basic => 1.0,
+            Assembler::Blue { modules } => 1. + modules.productivity_bonus(),
+            Assembler::Green { modules } => 1. + modules.productivity_bonus(),
         }
     }
 
@@ -221,9 +290,7 @@ impl CraftTech for Assembler {
         return match self {
             Assembler::Basic => panic!("Cannot add modules to basic assembler"),
             Assembler::Blue { modules } => modules.add_module(module),
-            Assembler::Green => {
-                // do nothing
-            }
+            Assembler::Green { modules } => modules.add_module(module),
         };
     }
 }
@@ -231,13 +298,15 @@ impl CraftTech for Assembler {
 struct SimpleCraftTech {
     name: String,
     speed: f32,
+    productivity: f32,
 }
 
 impl SimpleCraftTech {
-    pub fn new<S: AsRef<str>>(name: S, speed: f32) -> Self {
+    pub fn new<S: AsRef<str>>(name: S, speed: f32, productivity: f32) -> Self {
         SimpleCraftTech {
             name: name.as_ref().to_owned(),
             speed,
+            productivity,
         }
     }
 }
@@ -251,7 +320,11 @@ impl CraftTech for SimpleCraftTech {
         self.speed
     }
 
-    fn add_module(&mut self, module: crate::module::Module) {
+    fn productivity(&self) -> f32 {
+        self.productivity
+    }
+
+    fn add_module(&mut self, _module: crate::module::Module) {
         panic!("Cannot add module to SimpleCraftTech");
     }
 }

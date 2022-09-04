@@ -1,7 +1,6 @@
 use std::fmt::Display;
 
-
-
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub enum Module {
     Speed1,
@@ -13,25 +12,25 @@ pub enum Module {
 }
 
 impl Module {
-    fn speed(&self) -> f32 {
+    fn speed_bonus(&self) -> f32 {
         match self {
-            Module::Speed1 => 1.2,
-            Module::Speed2 => 1.3,
-            Module::Speed3 => 1.5,
-            Module::Productivity1 => 0.95,
-            Module::Productivity2 => 0.90,
-            Module::Productivity3 => 0.85,
+            Module::Speed1 => 0.2,
+            Module::Speed2 => 0.3,
+            Module::Speed3 => 0.5,
+            Module::Productivity1 => -0.05,
+            Module::Productivity2 => -0.10,
+            Module::Productivity3 => -0.15,
         }
     }
 
-    fn productivity(&self) -> f32 {
+    fn productivity_bonus(&self) -> f32 {
         match self {
-            Module::Speed1 => 1.0,
-            Module::Speed2 => 1.0,
-            Module::Speed3 => 1.0,
-            Module::Productivity1 => 1.04,
-            Module::Productivity2 => 1.06,
-            Module::Productivity3 => 1.10,
+            Module::Speed1 => 0.0,
+            Module::Speed2 => 0.0,
+            Module::Speed3 => 0.0,
+            Module::Productivity1 => 0.04,
+            Module::Productivity2 => 0.06,
+            Module::Productivity3 => 0.10,
         }
     }
 }
@@ -52,12 +51,14 @@ impl Display for Module {
 
 #[derive(Debug, Clone)]
 pub struct ModuleList<const N: usize> {
-    modules: Vec<Module>, 
+    modules: Vec<Module>,
 }
 
 impl<const N: usize> ModuleList<N> {
     pub fn new() -> Self {
-        ModuleList{modules: Vec::new()}
+        ModuleList {
+            modules: Vec::new(),
+        }
     }
 
     pub fn add_module(&mut self, module: Module) {
@@ -67,18 +68,20 @@ impl<const N: usize> ModuleList<N> {
         self.modules.push(module);
     }
 
-    pub fn speed(&self) -> f32 {
-        self.modules.iter()
-            .map(|m| m.speed())
-            .reduce(|x, y| x * y)
-            .unwrap_or(1.0)
+    pub fn speed_bonus(&self) -> f32 {
+        self.modules
+            .iter()
+            .map(|m| m.speed_bonus())
+            .reduce(|x, y| x + y)
+            .unwrap_or(0.0)
     }
 
-    pub fn productivity(&self) -> f32 {
-        self.modules.iter()
-            .map(|m| m.productivity())
-            .reduce(|x, y| x * y)
-            .unwrap_or(1.0)
+    pub fn productivity_bonus(&self) -> f32 {
+        self.modules
+            .iter()
+            .map(|m| m.productivity_bonus())
+            .reduce(|x, y| x + y)
+            .unwrap_or(0.0)
     }
 }
 
@@ -95,4 +98,3 @@ impl<const N: usize> Display for ModuleList<N> {
         f.write_str(")")
     }
 }
-

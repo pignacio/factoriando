@@ -11,7 +11,7 @@ use serde::de::DeserializeOwned;
 
 use crate::{
     error::Error,
-    module::{Module, ModuleList},
+    module::Module,
     product::{CraftTech, Product, ProductRow},
 };
 
@@ -54,13 +54,18 @@ fn run() -> Result<(), Error> {
         }
     }
 
-    let mut assembler = product::Assembler::Blue {
-        modules: ModuleList::new(),
-    };
-    assembler.add_module(Module::Speed3);
-    assembler.add_module(Module::Speed3);
-    let craft_tech_status =
-        CraftTechStatus::new(product::Miner::Electric, product::Furnace::Steel, assembler);
+    let mut productive_assembler = product::Assembler::green();
+    productive_assembler.add_module(Module::Productivity3);
+    productive_assembler.add_module(Module::Productivity3);
+    productive_assembler.add_module(Module::Productivity3);
+    productive_assembler.add_module(Module::Productivity3);
+    let mut craft_tech_status = CraftTechStatus::new(
+        product::Miner::Electric,
+        product::Furnace::Steel,
+        product::Assembler::blue(),
+    );
+
+    craft_tech_status.add_override("low_density_structure", Box::new(productive_assembler));
 
     let mut amount_per_second: HashMap<String, f32> = load_json("wanted.json")?;
     println!(
@@ -72,8 +77,10 @@ fn run() -> Result<(), Error> {
         let amount: f32 = *amount_per_second.get(&product.id).unwrap_or(&0.0);
         println!("Adding dependencies for {} {}w/s", amount, product.name);
         for (child, child_amount) in product.dependencies.iter() {
+            let child_tech = craft_tech_status.tech_for(product_by_id.get(child).unwrap());
             let current_amount = amount_per_second.get(child).unwrap_or(&0.0);
-            let new_amount = current_amount + (child_amount * amount / product.quantity as f32);
+            let new_amount = current_amount
+                + (child_amount * amount / child_tech.productivity() / product.quantity as f32);
             amount_per_second.insert(child.to_owned(), new_amount);
         }
     }
@@ -83,15 +90,12 @@ fn run() -> Result<(), Error> {
     for product in &sorted_products {
         let amount = *amount_per_second.get(&product.id).unwrap_or(&0.0);
 
+        let craft_tech = craft_tech_status.tech_for(product);
+
         if amount > 0. {
-            let source_amount = amount * product.craft_duration
-                / product.craft_type.best_craft_speed(&craft_tech_status)
-                / product.quantity as f32;
-            let source_string = format!(
-                "{:.1} {}s",
-                source_amount,
-                craft_tech_status.tech_for(product).name()
-            );
+            let source_amount =
+                amount * product.craft_duration / craft_tech.speed() / product.quantity as f32;
+            let source_string = format!("{:.1} {}s", source_amount, craft_tech.name());
 
             let color = match product.craft_type {
                 product::CraftType::Ore => graph::Color::Yellow,
@@ -107,7 +111,7 @@ fn run() -> Result<(), Error> {
                     &product.name,
                     amount,
                     source_amount,
-                    craft_tech_status.tech_for(product).name(),
+                    craft_tech.name(),
                     color,
                 ),
             );

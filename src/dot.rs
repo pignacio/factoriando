@@ -17,6 +17,12 @@ pub fn write_graph_with_clusters<P: AsRef<Path>>(
     clusters: HashMap<String, Vec<String>>,
     path: P,
 ) {
+    println!(
+        "Writing graph with {} nodes and {} edges to {}",
+        nodes.len(),
+        edges.len(),
+        path.as_ref().to_str().unwrap_or("Unknown path")
+    );
     let mut lines: Vec<String> = vec!["digraph G {".to_owned()];
 
     let mut nodes_by_id: HashMap<String, graph::Node> = HashMap::new();
